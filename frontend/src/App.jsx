@@ -55,14 +55,19 @@ function App() {
         }
       } catch (error) {
         if (!stopped) {
-          setMessage(`Progress update failed: ${error.message}`);
+          setMessage(
+            `Progress update failed: ${error.message}`
+          );
         }
       }
     }
 
     refreshCampaign();
 
-    const interval = setInterval(refreshCampaign, 2000);
+    const interval = setInterval(
+      refreshCampaign,
+      2000
+    );
 
     return () => {
       stopped = true;
@@ -72,6 +77,7 @@ function App() {
 
   async function handleFileUpload(event) {
     const file = event.target.files?.[0];
+
     if (!file) return;
 
     setMessage("");
@@ -95,7 +101,10 @@ function App() {
       const emails = rows
         .flatMap((row) => row.split(","))
         .map((value) =>
-          value.trim().replace(/^["']|["']$/g, "").toLowerCase()
+          value
+            .trim()
+            .replace(/^["']|["']$/g, "")
+            .toLowerCase()
         )
         .filter((value) => emailPattern.test(value));
 
@@ -103,6 +112,7 @@ function App() {
 
       setFileName(file.name);
       setRecipients(uniqueEmails);
+
       setMessage(
         `${uniqueEmails.length} valid unique email addresses loaded.`
       );
@@ -117,16 +127,24 @@ function App() {
     const email = manualEmail.trim().toLowerCase();
 
     if (!emailPattern.test(email)) {
-      setMessage("Please enter a valid email address.");
+      setMessage(
+        "Please enter a valid email address."
+      );
       return;
     }
 
     if (uniqueRecipients.includes(email)) {
-      setMessage("This email address is already in the recipient list.");
+      setMessage(
+        "This email address is already in the recipient list."
+      );
       return;
     }
 
-    setManualRecipients((previous) => [...previous, email]);
+    setManualRecipients((previous) => [
+      ...previous,
+      email,
+    ]);
+
     setManualEmail("");
     setMessage("Email address added successfully.");
   }
@@ -135,6 +153,7 @@ function App() {
     setManualRecipients((previous) =>
       previous.filter((item) => item !== email)
     );
+
     setMessage("");
   }
 
@@ -153,17 +172,23 @@ function App() {
     }
 
     if (!selectedTemplate) {
-      setMessage("Please select an email template.");
+      setMessage(
+        "Please select an email template."
+      );
       return;
     }
 
     if (uniqueRecipients.length === 0) {
-      setMessage("Please add at least one recipient.");
+      setMessage(
+        "Please add at least one recipient."
+      );
       return;
     }
 
     if (uniqueRecipients.length > 10000) {
-      setMessage("Maximum recipients per campaign is 10,000.");
+      setMessage(
+        "Maximum recipients per campaign is 10,000."
+      );
       return;
     }
 
@@ -173,6 +198,23 @@ function App() {
 
     if (!confirmed) return;
 
+    // Ask for the sending password only when
+    // the client clicks Send Campaign.
+    const password = window.prompt(
+      "Enter the campaign sending password:"
+    );
+
+    if (password === null) {
+      return;
+    }
+
+    if (!password.trim()) {
+      setMessage(
+        "Sending password is required."
+      );
+      return;
+    }
+
     setSubmitting(true);
     setMessage("");
 
@@ -180,7 +222,8 @@ function App() {
       const result = await createCampaign(
         campaignName.trim(),
         templateId,
-        uniqueRecipients
+        uniqueRecipients,
+        password
       );
 
       setCampaign({
@@ -195,9 +238,13 @@ function App() {
         results: [],
       });
 
-      setMessage("Campaign submitted. Sending has started.");
+      setMessage(
+        "Campaign submitted successfully. Sending has started."
+      );
     } catch (error) {
-      setMessage(`Unable to start campaign: ${error.message}`);
+      setMessage(
+        `Unable to start campaign: ${error.message}`
+      );
     } finally {
       setSubmitting(false);
     }
@@ -214,6 +261,7 @@ function App() {
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-icon">R</div>
+
           <div>
             <strong>Rent Assist</strong>
             <span>Email Platform</span>
@@ -221,62 +269,93 @@ function App() {
         </div>
 
         <nav>
-          <div className="nav-item active">Dashboard</div>
-          <div className="nav-item">Campaigns</div>
-          <div className="nav-item">Email Templates</div>
-          <div className="nav-item">Delivery Reports</div>
-          <div className="nav-item">Settings</div>
+          <div className="nav-item active">
+            Dashboard
+          </div>
+
+          <div className="nav-item">
+            Campaigns
+          </div>
+
+          <div className="nav-item">
+            Email Templates
+          </div>
+
+          <div className="nav-item">
+            Delivery Reports
+          </div>
+
+          <div className="nav-item">
+            Settings
+          </div>
         </nav>
 
-        <div className="sidebar-footer">Platform v1.0</div>
+        <div className="sidebar-footer">
+          Platform v1.0
+        </div>
       </aside>
 
       <main className="main">
         <header className="topbar">
           <div>
-            <p className="eyebrow">EMAIL MANAGEMENT</p>
+            <p className="eyebrow">
+              EMAIL MANAGEMENT
+            </p>
+
             <h1>Campaign Dashboard</h1>
+
             <p className="muted">
-              Create, preview, send, and manage customer email campaigns.
+              Create, preview, send, and manage
+              customer email campaigns.
             </p>
           </div>
 
-          <div className="account">Rent Assist Portal</div>
+          <div className="account">
+            Rent Assist Portal
+          </div>
         </header>
 
         <section className="stats">
           <div className="stat-card">
             <span>Recipients Added</span>
+
             <strong>
               {uniqueRecipients.length.toLocaleString()}
             </strong>
+
             <small>Current recipient list</small>
           </div>
 
           <div className="stat-card">
             <span>Emails Submitted</span>
+
             <strong>
               {(campaign?.sent || 0).toLocaleString()}
             </strong>
+
             <small>Accepted by email API</small>
           </div>
 
           <div className="stat-card">
             <span>Delivered</span>
+
             <strong>
               {(campaign?.delivered || 0).toLocaleString()}
             </strong>
+
             <small>Confirmed delivery events</small>
           </div>
 
           <div className="stat-card">
             <span>Failed / Bounced</span>
+
             <strong>
               {(
                 (campaign?.failed || 0) +
                 (campaign?.bounced || 0)
               ).toLocaleString()}
             </strong>
+
             <small>Reported failures</small>
           </div>
         </section>
@@ -285,6 +364,7 @@ function App() {
           <section className="panel">
             <div className="section-heading">
               <h2>Create Email Campaign</h2>
+
               <span className="status">
                 {campaign?.status || "Draft"}
               </span>
@@ -299,10 +379,10 @@ function App() {
               type="text"
               placeholder="e.g. Account Verification Campaign"
               value={campaignName}
+              disabled={isActive}
               onChange={(event) =>
                 setCampaignName(event.target.value)
               }
-              disabled={isActive}
             />
 
             <label htmlFor="customerFile">
@@ -310,28 +390,37 @@ function App() {
             </label>
 
             <div className="upload-box">
-              <div className="upload-symbol">↑</div>
-              <strong>Choose a customer list</strong>
+              <div className="upload-symbol">
+                ↑
+              </div>
+
+              <strong>
+                Choose a customer list
+              </strong>
 
               <p>
-                Upload a CSV file containing customer email addresses.
+                Upload a CSV file containing
+                customer email addresses.
               </p>
 
               <input
                 id="customerFile"
                 type="file"
                 accept=".csv,text/csv"
-                onChange={handleFileUpload}
                 disabled={isActive}
+                onChange={handleFileUpload}
               />
 
               {fileName && (
                 <div className="uploaded-file">
-                  <small>Selected: {fileName}</small>
+                  <small>
+                    Selected: {fileName}
+                  </small>
+
                   <button
                     type="button"
-                    onClick={clearUploadedList}
                     disabled={isActive}
+                    onClick={clearUploadedList}
                   >
                     Clear List
                   </button>
@@ -340,11 +429,15 @@ function App() {
             </div>
 
             <div className="manual-email-section">
-              <h3>Add Email Manually</h3>
+              <h3>
+                Add Email Manually
+              </h3>
 
               <p className="muted">
-                Enter an individual customer email address.
-                You can add multiple addresses without uploading a file.
+                Enter an individual customer
+                email address. You can add
+                multiple addresses without
+                uploading a file.
               </p>
 
               <div className="manual-email-input">
@@ -367,8 +460,8 @@ function App() {
 
                 <button
                   type="button"
-                  onClick={addManualEmail}
                   disabled={isActive}
+                  onClick={addManualEmail}
                 >
                   Add Email
                 </button>
@@ -390,8 +483,10 @@ function App() {
 
                       <button
                         type="button"
-                        onClick={() => removeManualEmail(email)}
                         disabled={isActive}
+                        onClick={() =>
+                          removeManualEmail(email)
+                        }
                       >
                         Remove
                       </button>
@@ -402,7 +497,10 @@ function App() {
             </div>
 
             {message && (
-              <div className="notice" role="status">
+              <div
+                className="notice"
+                role="status"
+              >
                 {message}
               </div>
             )}
@@ -419,7 +517,9 @@ function App() {
                 setTemplateId(event.target.value)
               }
             >
-              <option value="">Choose a template</option>
+              <option value="">
+                Choose a template
+              </option>
 
               {emailTemplates.map((template) => (
                 <option
@@ -432,8 +532,9 @@ function App() {
             </select>
 
             <div className="notice">
-              Select a saved email template to preview its
-              message and action button before sending.
+              Select a saved email template
+              to preview its message and
+              action button before sending.
             </div>
 
             <button
@@ -457,16 +558,25 @@ function App() {
             </button>
 
             {campaign && (
-              <div style={{ marginTop: "24px" }}>
-                <h3>Campaign Progress</h3>
+              <div
+                style={{
+                  marginTop: "24px",
+                }}
+              >
+                <h3>
+                  Campaign Progress
+                </h3>
 
                 <div className="preview-row">
                   <span>Status</span>
-                  <strong>{campaign.status}</strong>
+                  <strong>
+                    {campaign.status}
+                  </strong>
                 </div>
 
                 <div className="preview-row">
                   <span>Processed</span>
+
                   <strong>
                     {processed.toLocaleString()} /{" "}
                     {campaign.total.toLocaleString()}
@@ -499,18 +609,42 @@ function App() {
 
                 <div className="preview-row">
                   <span>Submitted</span>
-                  <strong>{campaign.sent || 0}</strong>
+
+                  <strong>
+                    {campaign.sent || 0}
+                  </strong>
                 </div>
 
                 <div className="preview-row">
                   <span>Failed</span>
-                  <strong>{campaign.failed || 0}</strong>
+
+                  <strong>
+                    {campaign.failed || 0}
+                  </strong>
+                </div>
+
+                <div className="preview-row">
+                  <span>Delivered</span>
+
+                  <strong>
+                    {campaign.delivered || 0}
+                  </strong>
+                </div>
+
+                <div className="preview-row">
+                  <span>Bounced</span>
+
+                  <strong>
+                    {campaign.bounced || 0}
+                  </strong>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleDownloadReport}
-                  disabled={!campaign.results?.length}
+                  disabled={
+                    !campaign.results?.length
+                  }
                   style={{
                     marginTop: "16px",
                     padding: "12px 18px",
@@ -529,16 +663,22 @@ function App() {
 
           <section className="panel">
             <div className="section-heading">
-              <h2>Campaign Preview</h2>
+              <h2>
+                Campaign Preview
+              </h2>
             </div>
 
             <div className="preview-row">
               <span>Campaign</span>
-              <strong>{campaignName || "Not named"}</strong>
+
+              <strong>
+                {campaignName || "Not named"}
+              </strong>
             </div>
 
             <div className="preview-row">
               <span>Total Recipients</span>
+
               <strong>
                 {uniqueRecipients.length.toLocaleString()}
               </strong>
@@ -546,29 +686,40 @@ function App() {
 
             <div className="preview-row">
               <span>Uploaded Recipients</span>
-              <strong>{recipients.length}</strong>
+
+              <strong>
+                {recipients.length}
+              </strong>
             </div>
 
             <div className="preview-row">
               <span>Manually Added</span>
-              <strong>{manualRecipients.length}</strong>
+
+              <strong>
+                {manualRecipients.length}
+              </strong>
             </div>
 
             <div className="preview-row">
               <span>Selected Template</span>
+
               <strong>
-                {selectedTemplate?.name || "Not selected"}
+                {selectedTemplate?.name ||
+                  "Not selected"}
               </strong>
             </div>
 
             <div className="preview-row">
               <span>Email Subject</span>
+
               <strong>
                 {selectedTemplate?.subject || "—"}
               </strong>
             </div>
 
-            <h3>Email Message Preview</h3>
+            <h3>
+              Email Message Preview
+            </h3>
 
             {selectedTemplate ? (
               <div
@@ -600,7 +751,9 @@ function App() {
                     }}
                   >
                     <a
-                      href={selectedTemplate.button.url}
+                      href={
+                        selectedTemplate.button.url
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -616,52 +769,66 @@ function App() {
                         fontSize: "14px",
                       }}
                     >
-                      {selectedTemplate.button.text}
+                      {
+                        selectedTemplate.button.text
+                      }
                     </a>
                   </div>
                 )}
               </div>
             ) : (
               <p className="muted">
-                Select an email template to preview its content.
+                Select an email template
+                to preview its content.
               </p>
             )}
 
-            <h3>Recipient Preview</h3>
+            <h3>
+              Recipient Preview
+            </h3>
 
             <div className="recipient-list">
               {uniqueRecipients.length === 0 ? (
                 <p className="muted">
-                  Upload a CSV file or manually add an email
+                  Upload a CSV file or
+                  manually add an email
                   address to preview recipients.
                 </p>
               ) : (
-                uniqueRecipients.slice(0, 10).map((email) => (
-                  <div
-                    className="recipient"
-                    key={email}
-                  >
-                    {email}
-                  </div>
-                ))
+                uniqueRecipients
+                  .slice(0, 10)
+                  .map((email) => (
+                    <div
+                      className="recipient"
+                      key={email}
+                    >
+                      {email}
+                    </div>
+                  ))
               )}
             </div>
 
             {uniqueRecipients.length > 10 && (
               <p className="muted">
-                +{uniqueRecipients.length - 10} more recipients
+                +{uniqueRecipients.length - 10}
+                {" "}more recipients
               </p>
             )}
 
             {campaign && (
               <div className="notice">
-                Campaign: {campaign.name}
+                <strong>
+                  Campaign: {campaign.name}
+                </strong>
+
                 <div>
                   Status: {campaign.status}
                 </div>
+
                 <div>
                   Submitted: {campaign.sent || 0}
                 </div>
+
                 <div>
                   Failed: {campaign.failed || 0}
                 </div>

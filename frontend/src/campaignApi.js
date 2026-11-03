@@ -1,33 +1,54 @@
 
 const API_URL = "https://email-sender-0eoe.onrender.com";
 
+let campaignPassword = "";
+
 async function request(path, options = {}) {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(campaignPassword
+        ? { "X-Platform-Key": campaignPassword }
+        : {}),
       ...options.headers,
     },
   });
 
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data.detail || "Request failed");
+    throw new Error(
+      typeof data.detail === "string"
+        ? data.detail
+        : `Request failed (${response.status})`
+    );
   }
 
   return data;
 }
 
-export async function createCampaign(name, templateId, recipients) {
-  return request("/api/campaigns", {
-    method: "POST",
-    body: JSON.stringify({
-      name,
-      template_id: templateId,
-      recipients,
-    }),
-  });
+export async function createCampaign(
+  name,
+  templateId,
+  recipients,
+  password
+) {
+  campaignPassword = password;
+
+  try {
+    return await request("/api/campaigns", {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        template_id: templateId,
+        recipients,
+      }),
+    });
+  } catch (error) {
+    campaignPassword = "";
+    throw error;
+  }
 }
 
 export async function getCampaign(campaignId) {
