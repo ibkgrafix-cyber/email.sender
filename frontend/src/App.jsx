@@ -21,6 +21,10 @@ function App() {
   const [submitting, setSubmitting] = useState(false);
   const [campaign, setCampaign] = useState(null);
 
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sendingPassword, setSendingPassword] = useState("");
+  const [modalError, setModalError] = useState("");
+
   const selectedTemplate = emailTemplates.find(
     (template) => template.id === templateId
   );
@@ -33,6 +37,14 @@ function App() {
   const isActive =
     campaign?.status === "queued" ||
     campaign?.status === "processing";
+
+  const canSend =
+    !submitting &&
+    !isActive &&
+    campaignName.trim().length > 0 &&
+    Boolean(selectedTemplate) &&
+    uniqueRecipients.length > 0 &&
+    uniqueRecipients.length <= 10000;
 
   const processed =
     (campaign?.sent || 0) + (campaign?.failed || 0);
@@ -127,9 +139,7 @@ function App() {
     const email = manualEmail.trim().toLowerCase();
 
     if (!emailPattern.test(email)) {
-      setMessage(
-        "Please enter a valid email address."
-      );
+      setMessage("Please enter a valid email address.");
       return;
     }
 
@@ -140,11 +150,7 @@ function App() {
       return;
     }
 
-    setManualRecipients((previous) => [
-      ...previous,
-      email,
-    ]);
-
+    setManualRecipients((previous) => [...previous, email]);
     setManualEmail("");
     setMessage("Email address added successfully.");
   }
@@ -153,7 +159,6 @@ function App() {
     setManualRecipients((previous) =>
       previous.filter((item) => item !== email)
     );
-
     setMessage("");
   }
 
@@ -163,59 +168,41 @@ function App() {
     setMessage("Uploaded email list cleared.");
   }
 
-  async function handleSendCampaign() {
-    if (submitting || isActive) return;
+  function openSendModal() {
+    if (!canSend) return;
 
-    if (!campaignName.trim()) {
-      setMessage("Please enter a campaign name.");
+    setSendingPassword("");
+    setModalError("");
+    setShowSendModal(true);
+  }
+
+  function closeSendModal() {
+    if (submitting) return;
+
+    setShowSendModal(false);
+    setSendingPassword("");
+    setModalError("");
+  }
+
+  async function confirmSendCampaign(event) {
+    event.preventDefault();
+
+    if (submitting) return;
+
+    if (!sendingPassword.trim()) {
+      setModalError("Please enter the sending password.");
       return;
     }
 
-    if (!selectedTemplate) {
-      setMessage(
-        "Please select an email template."
-      );
-      return;
-    }
-
-    if (uniqueRecipients.length === 0) {
-      setMessage(
-        "Please add at least one recipient."
-      );
-      return;
-    }
-
-    if (uniqueRecipients.length > 10000) {
-      setMessage(
-        "Maximum recipients per campaign is 10,000."
-      );
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `Send "${campaignName}" to ${uniqueRecipients.length} recipient(s)?`
-    );
-
-    if (!confirmed) return;
-
-    // Ask for the sending password only when
-    // the client clicks Send Campaign.
-    const password = window.prompt(
-      "Enter the campaign sending password:"
-    );
-
-    if (password === null) {
-      return;
-    }
-
-    if (!password.trim()) {
-      setMessage(
-        "Sending password is required."
+    if (!canSend) {
+      setModalError(
+        "Please complete the campaign details before sending."
       );
       return;
     }
 
     setSubmitting(true);
+    setModalError("");
     setMessage("");
 
     try {
@@ -223,7 +210,7 @@ function App() {
         campaignName.trim(),
         templateId,
         uniqueRecipients,
-        password
+        sendingPassword
       );
 
       setCampaign({
@@ -238,12 +225,15 @@ function App() {
         results: [],
       });
 
+      setShowSendModal(false);
+      setSendingPassword("");
+
       setMessage(
         "Campaign submitted successfully. Sending has started."
       );
     } catch (error) {
-      setMessage(
-        `Unable to start campaign: ${error.message}`
+      setModalError(
+        error.message || "Unable to start campaign."
       );
     } finally {
       setSubmitting(false);
@@ -252,7 +242,6 @@ function App() {
 
   function handleDownloadReport() {
     if (!campaign) return;
-
     downloadCampaignReport(campaign);
   }
 
@@ -261,7 +250,6 @@ function App() {
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-icon">R</div>
-
           <div>
             <strong>Rent Assist</strong>
             <span>Email Platform</span>
@@ -269,25 +257,11 @@ function App() {
         </div>
 
         <nav>
-          <div className="nav-item active">
-            Dashboard
-          </div>
-
-          <div className="nav-item">
-            Campaigns
-          </div>
-
-          <div className="nav-item">
-            Email Templates
-          </div>
-
-          <div className="nav-item">
-            Delivery Reports
-          </div>
-
-          <div className="nav-item">
-            Settings
-          </div>
+          <div className="nav-item active">Dashboard</div>
+          <div className="nav-item">Campaigns</div>
+          <div className="nav-item">Email Templates</div>
+          <div className="nav-item">Delivery Reports</div>
+          <div className="nav-item">Settings</div>
         </nav>
 
         <div className="sidebar-footer">
@@ -298,12 +272,8 @@ function App() {
       <main className="main">
         <header className="topbar">
           <div>
-            <p className="eyebrow">
-              EMAIL MANAGEMENT
-            </p>
-
+            <p className="eyebrow">EMAIL MANAGEMENT</p>
             <h1>Campaign Dashboard</h1>
-
             <p className="muted">
               Create, preview, send, and manage
               customer email campaigns.
@@ -318,44 +288,36 @@ function App() {
         <section className="stats">
           <div className="stat-card">
             <span>Recipients Added</span>
-
             <strong>
               {uniqueRecipients.length.toLocaleString()}
             </strong>
-
             <small>Current recipient list</small>
           </div>
 
           <div className="stat-card">
             <span>Emails Submitted</span>
-
             <strong>
               {(campaign?.sent || 0).toLocaleString()}
             </strong>
-
             <small>Accepted by email API</small>
           </div>
 
           <div className="stat-card">
             <span>Delivered</span>
-
             <strong>
               {(campaign?.delivered || 0).toLocaleString()}
             </strong>
-
             <small>Confirmed delivery events</small>
           </div>
 
           <div className="stat-card">
             <span>Failed / Bounced</span>
-
             <strong>
               {(
                 (campaign?.failed || 0) +
                 (campaign?.bounced || 0)
               ).toLocaleString()}
             </strong>
-
             <small>Reported failures</small>
           </div>
         </section>
@@ -364,7 +326,6 @@ function App() {
           <section className="panel">
             <div className="section-heading">
               <h2>Create Email Campaign</h2>
-
               <span className="status">
                 {campaign?.status || "Draft"}
               </span>
@@ -390,14 +351,8 @@ function App() {
             </label>
 
             <div className="upload-box">
-              <div className="upload-symbol">
-                ↑
-              </div>
-
-              <strong>
-                Choose a customer list
-              </strong>
-
+              <div className="upload-symbol">↑</div>
+              <strong>Choose a customer list</strong>
               <p>
                 Upload a CSV file containing
                 customer email addresses.
@@ -413,10 +368,7 @@ function App() {
 
               {fileName && (
                 <div className="uploaded-file">
-                  <small>
-                    Selected: {fileName}
-                  </small>
-
+                  <small>Selected: {fileName}</small>
                   <button
                     type="button"
                     disabled={isActive}
@@ -429,14 +381,11 @@ function App() {
             </div>
 
             <div className="manual-email-section">
-              <h3>
-                Add Email Manually
-              </h3>
+              <h3>Add Email Manually</h3>
 
               <p className="muted">
-                Enter an individual customer
-                email address. You can add
-                multiple addresses without
+                Enter an individual customer email address.
+                You can add multiple addresses without
                 uploading a file.
               </p>
 
@@ -480,7 +429,6 @@ function App() {
                       key={email}
                     >
                       <span>{email}</span>
-
                       <button
                         type="button"
                         disabled={isActive}
@@ -497,10 +445,7 @@ function App() {
             </div>
 
             {message && (
-              <div
-                className="notice"
-                role="status"
-              >
+              <div className="notice" role="status">
                 {message}
               </div>
             )}
@@ -517,9 +462,7 @@ function App() {
                 setTemplateId(event.target.value)
               }
             >
-              <option value="">
-                Choose a template
-              </option>
+              <option value="">Choose a template</option>
 
               {emailTemplates.map((template) => (
                 <option
@@ -532,23 +475,15 @@ function App() {
             </select>
 
             <div className="notice">
-              Select a saved email template
-              to preview its message and
-              action button before sending.
+              Select a saved email template to preview
+              its message and action button before sending.
             </div>
 
             <button
               className="send-button"
               type="button"
-              onClick={handleSendCampaign}
-              disabled={
-                submitting ||
-                isActive ||
-                !campaignName.trim() ||
-                !selectedTemplate ||
-                uniqueRecipients.length === 0 ||
-                uniqueRecipients.length > 10000
-              }
+              onClick={openSendModal}
+              disabled={!canSend}
             >
               {submitting
                 ? "Submitting Campaign..."
@@ -558,25 +493,16 @@ function App() {
             </button>
 
             {campaign && (
-              <div
-                style={{
-                  marginTop: "24px",
-                }}
-              >
-                <h3>
-                  Campaign Progress
-                </h3>
+              <div style={{ marginTop: "24px" }}>
+                <h3>Campaign Progress</h3>
 
                 <div className="preview-row">
                   <span>Status</span>
-                  <strong>
-                    {campaign.status}
-                  </strong>
+                  <strong>{campaign.status}</strong>
                 </div>
 
                 <div className="preview-row">
                   <span>Processed</span>
-
                   <strong>
                     {processed.toLocaleString()} /{" "}
                     {campaign.total.toLocaleString()}
@@ -609,42 +535,28 @@ function App() {
 
                 <div className="preview-row">
                   <span>Submitted</span>
-
-                  <strong>
-                    {campaign.sent || 0}
-                  </strong>
+                  <strong>{campaign.sent || 0}</strong>
                 </div>
 
                 <div className="preview-row">
                   <span>Failed</span>
-
-                  <strong>
-                    {campaign.failed || 0}
-                  </strong>
+                  <strong>{campaign.failed || 0}</strong>
                 </div>
 
                 <div className="preview-row">
                   <span>Delivered</span>
-
-                  <strong>
-                    {campaign.delivered || 0}
-                  </strong>
+                  <strong>{campaign.delivered || 0}</strong>
                 </div>
 
                 <div className="preview-row">
                   <span>Bounced</span>
-
-                  <strong>
-                    {campaign.bounced || 0}
-                  </strong>
+                  <strong>{campaign.bounced || 0}</strong>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleDownloadReport}
-                  disabled={
-                    !campaign.results?.length
-                  }
+                  disabled={!campaign.results?.length}
                   style={{
                     marginTop: "16px",
                     padding: "12px 18px",
@@ -663,14 +575,11 @@ function App() {
 
           <section className="panel">
             <div className="section-heading">
-              <h2>
-                Campaign Preview
-              </h2>
+              <h2>Campaign Preview</h2>
             </div>
 
             <div className="preview-row">
               <span>Campaign</span>
-
               <strong>
                 {campaignName || "Not named"}
               </strong>
@@ -678,7 +587,6 @@ function App() {
 
             <div className="preview-row">
               <span>Total Recipients</span>
-
               <strong>
                 {uniqueRecipients.length.toLocaleString()}
               </strong>
@@ -686,40 +594,29 @@ function App() {
 
             <div className="preview-row">
               <span>Uploaded Recipients</span>
-
-              <strong>
-                {recipients.length}
-              </strong>
+              <strong>{recipients.length}</strong>
             </div>
 
             <div className="preview-row">
               <span>Manually Added</span>
-
-              <strong>
-                {manualRecipients.length}
-              </strong>
+              <strong>{manualRecipients.length}</strong>
             </div>
 
             <div className="preview-row">
               <span>Selected Template</span>
-
               <strong>
-                {selectedTemplate?.name ||
-                  "Not selected"}
+                {selectedTemplate?.name || "Not selected"}
               </strong>
             </div>
 
             <div className="preview-row">
               <span>Email Subject</span>
-
               <strong>
                 {selectedTemplate?.subject || "—"}
               </strong>
             </div>
 
-            <h3>
-              Email Message Preview
-            </h3>
+            <h3>Email Message Preview</h3>
 
             {selectedTemplate ? (
               <div
@@ -751,9 +648,7 @@ function App() {
                     }}
                   >
                     <a
-                      href={
-                        selectedTemplate.button.url
-                      }
+                      href={selectedTemplate.button.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -769,30 +664,25 @@ function App() {
                         fontSize: "14px",
                       }}
                     >
-                      {
-                        selectedTemplate.button.text
-                      }
+                      {selectedTemplate.button.text}
                     </a>
                   </div>
                 )}
               </div>
             ) : (
               <p className="muted">
-                Select an email template
-                to preview its content.
+                Select an email template to preview
+                its content.
               </p>
             )}
 
-            <h3>
-              Recipient Preview
-            </h3>
+            <h3>Recipient Preview</h3>
 
             <div className="recipient-list">
               {uniqueRecipients.length === 0 ? (
                 <p className="muted">
-                  Upload a CSV file or
-                  manually add an email
-                  address to preview recipients.
+                  Upload a CSV file or manually add
+                  an email address to preview recipients.
                 </p>
               ) : (
                 uniqueRecipients
@@ -810,8 +700,7 @@ function App() {
 
             {uniqueRecipients.length > 10 && (
               <p className="muted">
-                +{uniqueRecipients.length - 10}
-                {" "}more recipients
+                +{uniqueRecipients.length - 10} more recipients
               </p>
             )}
 
@@ -820,15 +709,10 @@ function App() {
                 <strong>
                   Campaign: {campaign.name}
                 </strong>
-
-                <div>
-                  Status: {campaign.status}
-                </div>
-
+                <div>Status: {campaign.status}</div>
                 <div>
                   Submitted: {campaign.sent || 0}
                 </div>
-
                 <div>
                   Failed: {campaign.failed || 0}
                 </div>
@@ -837,6 +721,103 @@ function App() {
           </section>
         </div>
       </main>
+
+      {showSendModal && (
+        <div
+          className="modal-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeSendModal();
+            }
+          }}
+        >
+          <div
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sendModalTitle"
+          >
+            <h2 id="sendModalTitle">
+              Confirm Email Campaign
+            </h2>
+
+            <p>
+              Review your campaign details and enter
+              your sending password to continue.
+            </p>
+
+            <div className="modal-details">
+              <div>
+                <span>Campaign</span>
+                <strong>{campaignName}</strong>
+              </div>
+
+              <div>
+                <span>Recipients</span>
+                <strong>{uniqueRecipients.length}</strong>
+              </div>
+
+              <div>
+                <span>Template</span>
+                <strong>
+                  {selectedTemplate?.name || "Not selected"}
+                </strong>
+              </div>
+            </div>
+
+            <form onSubmit={confirmSendCampaign}>
+              <label htmlFor="sendingPassword">
+                Sending Password
+              </label>
+
+              <input
+                id="sendingPassword"
+                className="modal-password"
+                type="password"
+                placeholder="Enter campaign password"
+                value={sendingPassword}
+                autoComplete="off"
+                autoFocus
+                disabled={submitting}
+                onChange={(event) => {
+                  setSendingPassword(event.target.value);
+                  setModalError("");
+                }}
+              />
+
+              {modalError && (
+                <div className="modal-error" role="alert">
+                  {modalError}
+                </div>
+              )}
+
+              <div className="modal-actions">
+                <button
+                  className="modal-cancel"
+                  type="button"
+                  disabled={submitting}
+                  onClick={closeSendModal}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className="modal-confirm"
+                  type="submit"
+                  disabled={
+                    submitting ||
+                    !sendingPassword.trim()
+                  }
+                >
+                  {submitting
+                    ? "Sending..."
+                    : "Confirm & Send"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

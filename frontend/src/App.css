@@ -279,7 +279,7 @@ select {
   white-space: nowrap;
 }
 
-.manual-email-input > button:hover {
+.manual-email-input > button:hover:not(:disabled) {
   background: #2453d4;
 }
 
@@ -333,10 +333,21 @@ select {
   border-radius: 10px;
   padding: 16px;
   margin-top: 22px;
-  background: #a8b9df;
+  background: #3769f5;
   color: white;
   font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.send-button:hover:not(:disabled) {
+  background: #2453d4;
+}
+
+.send-button:disabled {
+  background: #a8b9df;
   cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .preview-row {
@@ -367,6 +378,124 @@ select {
   border-bottom: 1px solid #edf0f5;
   font-size: 13px;
   overflow-wrap: anywhere;
+}
+
+/* In-app confirmation dialog */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(16, 28, 53, 0.65);
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modal-card h2 {
+  font-size: 21px;
+  margin-bottom: 12px;
+}
+
+.modal-card p {
+  color: #7b879b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.modal-details {
+  padding: 15px;
+  background: #f5f7fb;
+  border-radius: 10px;
+  margin: 20px 0;
+}
+
+.modal-details div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.modal-details div:last-child {
+  margin-bottom: 0;
+}
+
+.modal-details span {
+  color: #7b879b;
+}
+
+.modal-details strong {
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.modal-password {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #dce3ef;
+  border-radius: 10px;
+  outline: none;
+}
+
+.modal-password:focus {
+  border-color: #3769f5;
+}
+
+.modal-error {
+  margin-top: 12px;
+  color: #c62828;
+  font-size: 13px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.modal-actions button {
+  flex: 1;
+  padding: 13px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modal-cancel {
+  background: white;
+  color: #17233b;
+  border: 1px solid #dce3ef;
+}
+
+.modal-confirm {
+  background: #3769f5;
+  color: white;
+  border: none;
+}
+
+.modal-confirm:hover:not(:disabled) {
+  background: #2453d4;
+}
+
+.modal-confirm:disabled {
+  background: #a8b9df;
+  cursor: not-allowed;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }
 
 @media (max-width: 1050px) {
@@ -424,5 +553,9 @@ select {
 @media (max-width: 500px) {
   .manual-email-input {
     flex-direction: column;
+  }
+
+  .modal-card {
+    padding: 20px;
   }
 }
