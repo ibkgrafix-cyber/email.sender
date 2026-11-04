@@ -5,24 +5,23 @@ export const emailTemplates = [
 
     name: "Account Verification",
 
-    subject: "Information About Your Account",
+    subject: "Account Information Update",
 
     senderName: "Spec-trum Assist Protal",
 
     body: `Hello,
 
-We are making some changes to improve the way account information is managed on our platform.
+We are currently making improvements to how account information is maintained and managed.
 
-As part of these changes, we are asking active account holders to review their details and confirm that their information is up to date by December 20, 2026.
+As part of this process, we encourage you to take a moment to review your account details and ensure that your information is accurate and up to date.
 
-You can complete this review by visiting our official website and signing in through your usual account access page.
+You can complete this review by visiting the official website and signing in through your usual account access page.
 
-If you have already reviewed your information, you do not need to take any further action.
+If your information is already current, no further action is necessary.
 
-Thank you for your cooperation.
+Thank you for your time and cooperation.
 
-Customer Support Team
-Spec-trum Assist Protal`,
+Customer Support Team`,
 
     button: {
       enabled: true,
