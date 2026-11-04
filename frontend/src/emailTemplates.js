@@ -30,5 +30,15 @@ Spec-trum Assist Protal`,
       url: "https://rentassistportal.org",
       color: "#2563EB",
     },
+
+    footer: {
+      copyright: "© 2026 Spectrum. All rights reserved.",
+      privacyPolicyText: "Privacy Policy",
+      privacyPolicyUrl: "",
+      termsText: "Terms of Service",
+      termsUrl: "",
+      notice:
+        "This is a system-generated message. Please do not reply.",
+    },
   },
 ];

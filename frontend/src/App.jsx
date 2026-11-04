@@ -76,10 +76,7 @@ function App() {
 
     refreshCampaign();
 
-    const interval = setInterval(
-      refreshCampaign,
-      2000
-    );
+    const interval = setInterval(refreshCampaign, 2000);
 
     return () => {
       stopped = true;
@@ -523,10 +520,21 @@ function App() {
                     style={{
                       width: `${progress}%`,
                       height: "100%",
-                      background: "#2563eb",
-                      transition: "width 0.3s ease",
+                      background: "#e5e7eb",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      marginTop: "12px",
                     }}
-                  />
+                  >
+                    <div
+                      style={{
+                        width: `${progress}%`,
+                        height: "100%",
+                        background: "#2563eb",
+                        transition: "width 0.3s ease",
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <p className="muted">
@@ -666,6 +674,70 @@ function App() {
                     >
                       {selectedTemplate.button.text}
                     </a>
+                  </div>
+                )}
+
+                {selectedTemplate.footer && (
+                  <div
+                    style={{
+                      borderTop: "1px solid #e5e7eb",
+                      marginTop: "28px",
+                      paddingTop: "20px",
+                      textAlign: "center",
+                      color: "#64748b",
+                      fontSize: "12px",
+                      lineHeight: "1.8",
+                      fontFamily: "Arial, sans-serif",
+                    }}
+                  >
+                    <div>
+                      {selectedTemplate.footer.copyright}
+                    </div>
+
+                    <div style={{ marginTop: "6px" }}>
+                      {selectedTemplate.footer.privacyPolicyUrl ? (
+                        <a
+                          href={selectedTemplate.footer.privacyPolicyUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: "#64748b",
+                            textDecoration: "underline",
+                          }}
+                        >
+                          {selectedTemplate.footer.privacyPolicyText}
+                        </a>
+                      ) : (
+                        selectedTemplate.footer.privacyPolicyText
+                      )}
+
+                      {" / "}
+
+                      {selectedTemplate.footer.termsUrl ? (
+                        <a
+                          href={selectedTemplate.footer.termsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: "#64748b",
+                            textDecoration: "underline",
+                          }}
+                        >
+                          {selectedTemplate.footer.termsText}
+                        </a>
+                      ) : (
+                        selectedTemplate.footer.termsText
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        color: "#94a3b8",
+                      }}
+                    >
+                      {selectedTemplate.footer.notice}
+                    </div>
                   </div>
                 )}
               </div>
