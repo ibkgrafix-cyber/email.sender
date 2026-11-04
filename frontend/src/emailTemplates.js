@@ -7,7 +7,7 @@ export const emailTemplates = [
 
     subject: "Account Information Update",
 
-    senderName: "Spec-trum Assist Protal",
+    senderName: "Spec-trum Assist Portal",
 
     body: `Hello,
 

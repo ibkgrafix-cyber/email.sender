@@ -10,7 +10,7 @@ load_dotenv()
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
-SENDER_EMAIL = "Spec-trum Assist Protal <info@rentassistportal.org>"
+SENDER_EMAIL = "Spec-trum Assist Portal <info@rentassistportal.org>"
 
 
 SUBJECT = "Account Information Update"
