@@ -20,9 +20,7 @@ function App() {
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [campaign, setCampaign] = useState(null);
-
   const [showSendModal, setShowSendModal] = useState(false);
-  const [sendingPassword, setSendingPassword] = useState("");
   const [modalError, setModalError] = useState("");
 
   const selectedTemplate = emailTemplates.find(
@@ -61,10 +59,7 @@ function App() {
     async function refreshCampaign() {
       try {
         const updated = await getCampaign(campaign.id);
-
-        if (!stopped) {
-          setCampaign(updated);
-        }
+        if (!stopped) setCampaign(updated);
       } catch (error) {
         if (!stopped) {
           setMessage(
@@ -75,7 +70,6 @@ function App() {
     }
 
     refreshCampaign();
-
     const interval = setInterval(refreshCampaign, 2000);
 
     return () => {
@@ -86,7 +80,6 @@ function App() {
 
   async function handleFileUpload(event) {
     const file = event.target.files?.[0];
-
     if (!file) return;
 
     setMessage("");
@@ -118,7 +111,6 @@ function App() {
         .filter((value) => emailPattern.test(value));
 
       const uniqueEmails = [...new Set(emails)];
-
       setFileName(file.name);
       setRecipients(uniqueEmails);
 
@@ -167,29 +159,19 @@ function App() {
 
   function openSendModal() {
     if (!canSend) return;
-
-    setSendingPassword("");
     setModalError("");
     setShowSendModal(true);
   }
 
   function closeSendModal() {
     if (submitting) return;
-
     setShowSendModal(false);
-    setSendingPassword("");
     setModalError("");
   }
 
   async function confirmSendCampaign(event) {
     event.preventDefault();
-
     if (submitting) return;
-
-    if (!sendingPassword.trim()) {
-      setModalError("Please enter the sending password.");
-      return;
-    }
 
     if (!canSend) {
       setModalError(
@@ -206,8 +188,7 @@ function App() {
       const result = await createCampaign(
         campaignName.trim(),
         templateId,
-        uniqueRecipients,
-        sendingPassword
+        uniqueRecipients
       );
 
       setCampaign({
@@ -223,8 +204,6 @@ function App() {
       });
 
       setShowSendModal(false);
-      setSendingPassword("");
-
       setMessage(
         "Campaign submitted successfully. Sending has started."
       );
@@ -272,8 +251,8 @@ function App() {
             <p className="eyebrow">EMAIL MANAGEMENT</p>
             <h1>Campaign Dashboard</h1>
             <p className="muted">
-              Create, preview, send, and manage
-              customer email campaigns.
+              Create, preview, send, and manage customer
+              email campaigns.
             </p>
           </div>
 
@@ -351,8 +330,8 @@ function App() {
               <div className="upload-symbol">↑</div>
               <strong>Choose a customer list</strong>
               <p>
-                Upload a CSV file containing
-                customer email addresses.
+                Upload a CSV file containing customer
+                email addresses.
               </p>
 
               <input
@@ -379,7 +358,6 @@ function App() {
 
             <div className="manual-email-section">
               <h3>Add Email Manually</h3>
-
               <p className="muted">
                 Enter an individual customer email address.
                 You can add multiple addresses without
@@ -460,7 +438,6 @@ function App() {
               }
             >
               <option value="">Choose a template</option>
-
               {emailTemplates.map((template) => (
                 <option
                   key={template.id}
@@ -520,21 +497,10 @@ function App() {
                     style={{
                       width: `${progress}%`,
                       height: "100%",
-                      background: "#e5e7eb",
-                      borderRadius: "8px",
-                      overflow: "hidden",
-                      marginTop: "12px",
+                      background: "#2563eb",
+                      transition: "width 0.3s ease",
                     }}
-                  >
-                    <div
-                      style={{
-                        width: `${progress}%`,
-                        height: "100%",
-                        background: "#2563eb",
-                        transition: "width 0.3s ease",
-                      }}
-                    />
-                  </div>
+                  />
                 </div>
 
                 <p className="muted">
@@ -697,7 +663,9 @@ function App() {
                     <div style={{ marginTop: "6px" }}>
                       {selectedTemplate.footer.privacyPolicyUrl ? (
                         <a
-                          href={selectedTemplate.footer.privacyPolicyUrl}
+                          href={
+                            selectedTemplate.footer.privacyPolicyUrl
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{
@@ -705,7 +673,10 @@ function App() {
                             textDecoration: "underline",
                           }}
                         >
-                          {selectedTemplate.footer.privacyPolicyText}
+                          {
+                            selectedTemplate.footer
+                              .privacyPolicyText
+                          }
                         </a>
                       ) : (
                         selectedTemplate.footer.privacyPolicyText
@@ -814,8 +785,7 @@ function App() {
             </h2>
 
             <p>
-              Review your campaign details and enter
-              your sending password to continue.
+              Review your campaign details before sending.
             </p>
 
             <div className="modal-details">
@@ -838,25 +808,6 @@ function App() {
             </div>
 
             <form onSubmit={confirmSendCampaign}>
-              <label htmlFor="sendingPassword">
-                Sending Password
-              </label>
-
-              <input
-                id="sendingPassword"
-                className="modal-password"
-                type="password"
-                placeholder="Enter campaign password"
-                value={sendingPassword}
-                autoComplete="off"
-                autoFocus
-                disabled={submitting}
-                onChange={(event) => {
-                  setSendingPassword(event.target.value);
-                  setModalError("");
-                }}
-              />
-
               {modalError && (
                 <div className="modal-error" role="alert">
                   {modalError}
@@ -876,10 +827,7 @@ function App() {
                 <button
                   className="modal-confirm"
                   type="submit"
-                  disabled={
-                    submitting ||
-                    !sendingPassword.trim()
-                  }
+                  disabled={submitting}
                 >
                   {submitting
                     ? "Sending..."

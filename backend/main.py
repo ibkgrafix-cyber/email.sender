@@ -4,13 +4,12 @@ import re
 import time
 import uuid
 import threading
-import secrets
 from datetime import datetime, timezone
 from threading import Lock
 
 import requests
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -36,7 +35,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
     ],
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "X-Platform-Key"],
+    allow_headers=["Content-Type"],
 )
 
 campaigns = {}
@@ -49,8 +48,6 @@ EMAIL_PATTERN = re.compile(
 MAX_RECIPIENTS = 10000
 EMAILS_PER_SECOND = 1
 
-LOCAL_HOSTS = {"127.0.0.1", "::1"}
-
 
 class CampaignRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
@@ -59,41 +56,6 @@ class CampaignRequest(BaseModel):
         min_length=1,
         max_length=10000
     )
-
-
-def require_platform_key(
-    key: str | None,
-    request: Request
-):
-    # Local development: requests originating from the
-    # same computer may use the dashboard without a key.
-    #
-    # Public deployments still require PLATFORM_API_KEY.
-    local_mode = (
-        os.getenv("LOCAL_DEVELOPMENT", "false").lower()
-        == "true"
-    )
-
-    if local_mode and request.client:
-        if request.client.host in LOCAL_HOSTS:
-            return
-
-    configured_key = os.getenv("PLATFORM_API_KEY")
-
-    if not configured_key:
-        raise HTTPException(
-            status_code=503,
-            detail="Platform API key is not configured."
-        )
-
-    if not key or not secrets.compare_digest(
-        key,
-        configured_key
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="Access denied."
-        )
 
 
 def process_campaign(campaign_id):
@@ -164,12 +126,8 @@ def home():
 
 @app.post("/api/campaigns")
 def create_campaign(
-    campaign_request: CampaignRequest,
-    request: Request,
-    x_platform_key: str | None = Header(default=None)
+    campaign_request: CampaignRequest
 ):
-    require_platform_key(x_platform_key, request)
-
     if campaign_request.template_id != "account-verification":
         raise HTTPException(
             status_code=400,
@@ -232,13 +190,7 @@ def create_campaign(
 
 
 @app.get("/api/campaigns/{campaign_id}")
-def get_campaign(
-    campaign_id: str,
-    request: Request,
-    x_platform_key: str | None = Header(default=None)
-):
-    require_platform_key(x_platform_key, request)
-
+def get_campaign(campaign_id: str):
     with campaign_lock:
         campaign = campaigns.get(campaign_id)
 
