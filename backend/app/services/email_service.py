@@ -17,20 +17,23 @@ SUBJECT = "Account Information Update"
 
 MESSAGE = """Hello,
 
+Hello,
+
 We are currently making improvements to how account information is maintained and managed.
 
-As part of this process, we encourage you to take a moment to review your account details and ensure that your information is accurate and up to date.
+As part of these updates, we encourage you to review your account details to ensure that your information remains accurate and up to date.
 
-You can complete this review by visiting the official website and signing in through your usual account access page.
+You can review your account information by visiting the website you normally use to access your account.
 
-If your information is already current, no further action is necessary.
+If your information is already correct, no further action is required.
 
 Thank you for your time and cooperation.
 
+Kind regards,
 Customer Support Team"""
 
 
-BUTTON_TEXT = "Review Your Account Details"
+BUTTON_TEXT = "Review Account Information"
 BUTTON_URL = "https://rentassistportal.org"
 BUTTON_COLOR = "#2563EB"
 
