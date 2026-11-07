@@ -13,21 +13,21 @@ RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 SENDER_EMAIL = "Spec-trum Assist Portal <info@rentassistportal.org>"
 
 
-SUBJECT = "Account Information Update"
+SUBJECT = "Important Account Update"
+
+PREVIEWTEXT = "Your attention is requested regarding your account information.",
 
 MESSAGE = """Hello,
 
 Hello,
 
-We are currently making improvements to how account information is maintained and managed.
+An important update regarding your account information requires your attention.
 
-As part of these updates, we encourage you to review your account details to ensure that your information remains accurate and up to date.
+To ensure your account details remain accurate and current, please review the information associated with your account.
 
-You can review your account information by visiting the website you normally use to access your account.
+Click the button below to access the account portal and review your details.
 
-If your information is already correct, no further action is required.
-
-Thank you for your time and cooperation.
+Thank you for your prompt attention to this matter.
 
 Kind regards,
 Customer Support Team"""
