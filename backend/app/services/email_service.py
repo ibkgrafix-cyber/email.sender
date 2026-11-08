@@ -10,7 +10,7 @@ load_dotenv()
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
-SENDER_EMAIL = "Spec-trum Assist Portal <info@ibkgrafix.com.ng>"
+SENDER_EMAIL = "ibk grafix <info@ibkgrafix.com.ng>"
 
 
 SUBJECT = "Important Account Update"
