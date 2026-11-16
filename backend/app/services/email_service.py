@@ -2,6 +2,7 @@
 import os
 import re
 from html import escape
+from html.parser import HTMLParser
 
 import requests
 from dotenv import load_dotenv
@@ -10,143 +11,137 @@ load_dotenv()
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
-SENDER_EMAIL = "ibk grafix <info@ibkgrafix.com.ng>"
+SENDER_EMAIL = "IBK Grafix <info@ibkgrafix.com.ng>"
+
+ALLOWED_TAGS = {
+    "p", "br", "strong", "b", "em", "i", "u", "s",
+    "ul", "ol", "li", "a", "h1", "h2", "h3",
+    "blockquote", "pre", "code", "hr"
+}
+
+VOID_TAGS = {"br", "hr"}
+
+EMAIL_PATTERN = re.compile(
+    r"^[^@\s,]+@[^@\s,]+\.[^@\s,]+$"
+)
 
 
-SUBJECT = "Important Account Update"
+class EmailHTMLSanitizer(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.output = []
+        self.blocked_depth = 0
 
-PREVIEWTEXT = "Your attention is requested regarding your account information.",
+    def handle_starttag(self, tag, attrs):
+        if tag in {"script", "style", "iframe", "object", "svg"}:
+            self.blocked_depth += 1
+            return
 
-MESSAGE = """Hello,
+        if self.blocked_depth or tag not in ALLOWED_TAGS:
+            return
 
-Hello,
+        if tag == "a":
+            attributes = dict(attrs)
+            href = attributes.get("href", "").strip()
 
-An important update regarding your account information requires your attention.
+            if not re.match(r"^(https?://|mailto:)", href, re.I):
+                self.output.append("<a>")
+                return
 
-To ensure your account details remain accurate and current, please review the information associated with your account.
+            safe_href = escape(href, quote=True)
+            self.output.append(
+                f'<a href="{safe_href}" '
+                'target="_blank" rel="noopener noreferrer">'
+            )
+            return
 
-Click the button below to access the account portal and review your details.
+        if tag in VOID_TAGS:
+            self.output.append(f"<{tag}>")
+        else:
+            self.output.append(f"<{tag}>")
 
-Thank you for your prompt attention to this matter.
+    def handle_endtag(self, tag):
+        if tag in {"script", "style", "iframe", "object", "svg"}:
+            if self.blocked_depth:
+                self.blocked_depth -= 1
+            return
 
-Kind regards,
-Customer Support Team"""
+        if self.blocked_depth or tag not in ALLOWED_TAGS:
+            return
+
+        if tag not in VOID_TAGS:
+            self.output.append(f"</{tag}>")
+
+    def handle_data(self, data):
+        if not self.blocked_depth:
+            self.output.append(escape(data))
+
+    def get_html(self):
+        return "".join(self.output)
 
 
-BUTTON_TEXT = "Review Account Information"
-BUTTON_URL = "https://rentassistportal.org"
-BUTTON_COLOR = "#2563EB"
-
-FOOTER_COPYRIGHT = "© 2026 Spectrum. All rights reserved."
-FOOTER_NOTICE = "This is a system-generated message. Please do not reply."
-
-# Replace these with the actual published policy URLs
-# before enabling clickable policy links.
-PRIVACY_POLICY_URL = ""
-TERMS_OF_SERVICE_URL = ""
+def sanitize_html(html_content: str) -> str:
+    sanitizer = EmailHTMLSanitizer()
+    sanitizer.feed(html_content or "")
+    sanitizer.close()
+    return sanitizer.get_html()
 
 
-def send_email(recipient_email: str):
+def send_email(
+    recipient_email: str,
+    subject: str,
+    html_body: str,
+    text_body: str
+):
     if not RESEND_API_KEY:
         raise ValueError("RESEND_API_KEY is missing.")
 
-    recipient_email = recipient_email.strip()
+    recipient_email = recipient_email.strip().lower()
+    subject = subject.strip()
 
-    if not re.fullmatch(
-        r"[^@\s,]+@[^@\s,]+\.[^@\s,]+",
-        recipient_email
-    ):
+    if not EMAIL_PATTERN.fullmatch(recipient_email):
         raise ValueError("Invalid recipient email address.")
 
-    html_body = escape(MESSAGE).replace("\n", "<br>")
+    if not subject or len(subject) > 200:
+        raise ValueError("Email subject must contain 1–200 characters.")
 
-    def footer_item(label, url):
-        if url:
-            return (
-                f'<a href="{escape(url, quote=True)}" '
-                'style="color:#64748b;text-decoration:underline;">'
-                f'{escape(label)}</a>'
-            )
-        return escape(label)
+    if not html_body or not html_body.strip():
+        raise ValueError("Email message cannot be empty.")
 
-    privacy_html = footer_item("Privacy Policy", PRIVACY_POLICY_URL)
-    terms_html = footer_item("Terms of Service", TERMS_OF_SERVICE_URL)
+    safe_html = sanitize_html(html_body)
+
+    if not safe_html.strip():
+        raise ValueError("Email message contains no valid content.")
+
+    safe_text = (text_body or "").strip()
+
+    if not safe_text:
+        safe_text = re.sub(r"<[^>]+>", " ", safe_html)
+        safe_text = re.sub(r"\s+", " ", safe_text).strip()
 
     html_message = f"""
+    <!DOCTYPE html>
     <html>
       <body>
         <div style="
-          font-family:Arial,sans-serif;
-          font-size:15px;
-          line-height:1.7;
-          color:#333333;
-          max-width:600px;
-          margin:auto;
+          font-family: Arial, sans-serif;
+          font-size: 15px;
+          line-height: 1.7;
+          color: #333333;
+          max-width: 600px;
+          margin: auto;
         ">
-          {html_body}
-
-          <div style="text-align:center;margin:24px 0;">
-            <a
-              href="{escape(BUTTON_URL, quote=True)}"
-              style="
-                display:inline-block;
-                background-color:{BUTTON_COLOR};
-                color:#ffffff;
-                padding:14px 22px;
-                text-decoration:none;
-                border-radius:6px;
-                font-weight:bold;
-              "
-            >
-              {escape(BUTTON_TEXT)}
-            </a>
-          </div>
-
-          <div style="
-            border-top:1px solid #e5e7eb;
-            margin-top:28px;
-            padding-top:20px;
-            text-align:center;
-            color:#64748b;
-            font-size:12px;
-            line-height:1.8;
-          ">
-            <div>
-              {escape(FOOTER_COPYRIGHT)}
-            </div>
-
-            <div style="margin-top:6px;">
-              {privacy_html} / {terms_html}
-            </div>
-
-            <div style="margin-top:12px;color:#94a3b8;">
-              {escape(FOOTER_NOTICE)}
-            </div>
-          </div>
+          {safe_html}
         </div>
       </body>
     </html>
     """
 
-    text_message = (
-        MESSAGE
-        + "\n\n"
-        + BUTTON_TEXT
-        + "\n"
-        + BUTTON_URL
-        + "\n\n"
-        + FOOTER_COPYRIGHT
-        + "\n"
-        + "Privacy Policy / Terms of Service"
-        + "\n"
-        + FOOTER_NOTICE
-    )
-
     payload = {
         "from": SENDER_EMAIL,
         "to": [recipient_email],
-        "subject": SUBJECT,
-        "text": text_message,
+        "subject": subject,
+        "text": safe_text,
         "html": html_message
     }
 

@@ -23,13 +23,21 @@ async function request(path, options = {}) {
   return data;
 }
 
-export async function createCampaign(name, templateId, recipients) {
+export async function createCampaign(
+  name,
+  templateId,
+  recipients,
+  emailContent
+) {
   return request("/api/campaigns", {
     method: "POST",
     body: JSON.stringify({
       name,
       template_id: templateId,
       recipients,
+      subject: emailContent.subject,
+      html_body: emailContent.htmlBody,
+      text_body: emailContent.textBody,
     }),
   });
 }
@@ -57,13 +65,22 @@ export function downloadCampaignReport(campaign) {
     )
     .join("\r\n");
 
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob([csv], {
+    type: "text/csv;charset=utf-8;",
+  });
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
+
   link.href = url;
-  link.download = `${(campaign.name || "campaign").replace(/[^a-z0-9_-]+/gi, "_")}-report.csv`;
+  link.download = `${(campaign.name || "campaign").replace(
+    /[^a-z0-9_-]+/gi,
+    "_"
+  )}-report.csv`;
+
   document.body.appendChild(link);
   link.click();
   link.remove();
+
   URL.revokeObjectURL(url);
 }

@@ -4,6 +4,7 @@ import re
 import time
 import uuid
 import threading
+
 from datetime import datetime, timezone
 from threading import Lock
 
@@ -19,7 +20,7 @@ load_dotenv()
 
 app = FastAPI(
     title="Client Email Platform",
-    version="1.0.0"
+    version="1.1.0"
 )
 
 FRONTEND_ORIGIN = os.getenv(
@@ -51,7 +52,27 @@ EMAILS_PER_SECOND = 1
 
 class CampaignRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    template_id: str
+
+    template_id: str = Field(
+        default="custom",
+        max_length=100
+    )
+
+    subject: str = Field(
+        min_length=1,
+        max_length=200
+    )
+
+    html_body: str = Field(
+        min_length=1,
+        max_length=500000
+    )
+
+    text_body: str = Field(
+        default="",
+        max_length=500000
+    )
+
     recipients: list[str] = Field(
         min_length=1,
         max_length=10000
@@ -61,10 +82,16 @@ class CampaignRequest(BaseModel):
 def process_campaign(campaign_id):
     with campaign_lock:
         campaign = campaigns[campaign_id]
+
         campaign["status"] = "processing"
+
         recipients = list(campaign["recipients"])
+        subject = campaign["subject"]
+        html_body = campaign["html_body"]
+        text_body = campaign["text_body"]
 
     for email in recipients:
+
         with campaign_lock:
             campaign = campaigns[campaign_id]
 
@@ -72,10 +99,16 @@ def process_campaign(campaign_id):
                 break
 
         try:
-            result = send_email(email)
+            result = send_email(
+                recipient_email=email,
+                subject=subject,
+                html_body=html_body,
+                text_body=text_body
+            )
 
             with campaign_lock:
                 campaign["sent"] += 1
+
                 campaign["results"].append({
                     "email": email,
                     "status": "submitted",
@@ -86,6 +119,7 @@ def process_campaign(campaign_id):
         except requests.exceptions.RequestException as error:
             with campaign_lock:
                 campaign["failed"] += 1
+
                 campaign["results"].append({
                     "email": email,
                     "status": "failed",
@@ -93,14 +127,15 @@ def process_campaign(campaign_id):
                     "error": str(error)[:200]
                 })
 
-        except Exception:
+        except Exception as error:
             with campaign_lock:
                 campaign["failed"] += 1
+
                 campaign["results"].append({
                     "email": email,
                     "status": "failed",
                     "resend_id": None,
-                    "error": "Unexpected sending error."
+                    "error": str(error)[:200]
                 })
 
         time.sleep(1 / EMAILS_PER_SECOND)
@@ -128,10 +163,26 @@ def home():
 def create_campaign(
     campaign_request: CampaignRequest
 ):
-    if campaign_request.template_id != "account-verification":
+    name = campaign_request.name.strip()
+    subject = campaign_request.subject.strip()
+    html_body = campaign_request.html_body.strip()
+
+    if not name:
         raise HTTPException(
             status_code=400,
-            detail="Unsupported email template."
+            detail="Campaign name cannot be empty."
+        )
+
+    if not subject:
+        raise HTTPException(
+            status_code=400,
+            detail="Email subject cannot be empty."
+        )
+
+    if not html_body:
+        raise HTTPException(
+            status_code=400,
+            detail="Email message cannot be empty."
         )
 
     recipients = list(dict.fromkeys(
@@ -159,8 +210,11 @@ def create_campaign(
     with campaign_lock:
         campaigns[campaign_id] = {
             "id": campaign_id,
-            "name": campaign_request.name,
+            "name": name,
             "template_id": campaign_request.template_id,
+            "subject": subject,
+            "html_body": html_body,
+            "text_body": campaign_request.text_body,
             "status": "queued",
             "total": len(recipients),
             "sent": 0,
@@ -180,6 +234,7 @@ def create_campaign(
         args=(campaign_id,),
         daemon=True
     )
+
     worker.start()
 
     return {
