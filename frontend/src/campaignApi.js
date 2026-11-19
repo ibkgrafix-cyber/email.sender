@@ -5,8 +5,7 @@ async function request(path, options = {}) {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
+      ...(options.headers || {}),
     },
   });
 
@@ -27,18 +26,25 @@ export async function createCampaign(
   name,
   templateId,
   recipients,
-  emailContent
+  emailContent,
+  attachments = []
 ) {
+  const formData = new FormData();
+
+  formData.append("name", name);
+  formData.append("template_id", templateId);
+  formData.append("recipients", JSON.stringify(recipients));
+  formData.append("subject", emailContent.subject);
+  formData.append("html_body", emailContent.htmlBody);
+  formData.append("text_body", emailContent.textBody);
+
+  attachments.forEach((file) => {
+    formData.append("files", file);
+  });
+
   return request("/api/campaigns", {
     method: "POST",
-    body: JSON.stringify({
-      name,
-      template_id: templateId,
-      recipients,
-      subject: emailContent.subject,
-      html_body: emailContent.htmlBody,
-      text_body: emailContent.textBody,
-    }),
+    body: formData,
   });
 }
 

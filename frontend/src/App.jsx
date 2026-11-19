@@ -18,6 +18,26 @@ const emailPattern = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/;
 const STORAGE_KEY = "rent-assist-custom-email-templates";
 const BLANK_TEMPLATE = "__blank__";
 
+const ALLOWED_ATTACHMENT_EXTENSIONS = [
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+];
+
+const MAX_ATTACHMENT_COUNT = 10;
+const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
+const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024;
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",
@@ -92,6 +112,8 @@ function App() {
   const [manualEmail, setManualEmail] = useState("");
   const [manualRecipients, setManualRecipients] = useState([]);
 
+  const [attachments, setAttachments] = useState([]);
+
   const [customTemplates, setCustomTemplates] = useState(
     loadCustomTemplates
   );
@@ -123,6 +145,11 @@ function App() {
   const uniqueRecipients = useMemo(
     () => [...new Set([...recipients, ...manualRecipients])],
     [recipients, manualRecipients]
+  );
+
+  const totalAttachmentSize = useMemo(
+    () => attachments.reduce((total, file) => total + file.size, 0),
+    [attachments]
   );
 
   const editor = useEditor({
@@ -268,6 +295,75 @@ function App() {
     }
 
     event.target.value = "";
+  }
+
+  function handleAttachmentUpload(event) {
+    const selectedFiles = Array.from(event.target.files || []);
+
+    if (!selectedFiles.length) return;
+
+    setMessage("");
+
+    const newFiles = selectedFiles.filter(
+      (file) =>
+        !attachments.some(
+          (existing) =>
+            existing.name === file.name &&
+            existing.size === file.size &&
+            existing.lastModified === file.lastModified
+        )
+    );
+
+    if (newFiles.length === 0) {
+      setMessage("These files have already been attached.");
+      event.target.value = "";
+      return;
+    }
+
+    if (attachments.length + newFiles.length > MAX_ATTACHMENT_COUNT) {
+      setMessage("You can attach a maximum of 10 files per campaign.");
+      event.target.value = "";
+      return;
+    }
+
+    for (const file of newFiles) {
+      const extension = file.name.includes(".")
+        ? file.name.substring(file.name.lastIndexOf(".")).toLowerCase()
+        : "";
+
+      if (!ALLOWED_ATTACHMENT_EXTENSIONS.includes(extension)) {
+        setMessage(`File type not supported: ${file.name}`);
+        event.target.value = "";
+        return;
+      }
+
+      if (file.size > MAX_ATTACHMENT_SIZE) {
+        setMessage(`${file.name} exceeds the 10 MB per-file limit.`);
+        event.target.value = "";
+        return;
+      }
+    }
+
+    const combinedSize =
+      totalAttachmentSize +
+      newFiles.reduce((total, file) => total + file.size, 0);
+
+    if (combinedSize > MAX_TOTAL_ATTACHMENT_SIZE) {
+      setMessage("The combined attachment size cannot exceed 20 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setAttachments((previous) => [...previous, ...newFiles]);
+    setMessage(`${newFiles.length} attachment(s) added successfully.`);
+    event.target.value = "";
+  }
+
+  function removeAttachment(index) {
+    setAttachments((previous) =>
+      previous.filter((_, fileIndex) => fileIndex !== index)
+    );
+    setMessage("Attachment removed.");
   }
 
   function addManualEmail() {
@@ -446,7 +542,8 @@ function App() {
           subject: emailSubject.trim(),
           htmlBody,
           textBody,
-        }
+        },
+        attachments
       );
 
       setCampaign({
@@ -760,6 +857,54 @@ function App() {
                 Select text before choosing Add Link to make that text clickable.
               </p>
 
+              <div className="attachment-section">
+                <label htmlFor="emailAttachments">Email Attachments</label>
+
+                <input
+                  id="emailAttachments"
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                  disabled={isActive || submitting}
+                  onChange={handleAttachmentUpload}
+                />
+
+                <small>
+                  Supported: PDF, DOC, DOCX, JPG, JPEG, PNG and GIF.
+                  Maximum 10 files, 10 MB per file and 20 MB combined.
+                </small>
+
+                {attachments.length > 0 && (
+                  <div className="attachment-list">
+                    {attachments.map((file, index) => (
+                      <div
+                        className="attachment-item"
+                        key={`${file.name}-${file.size}-${file.lastModified}`}
+                      >
+                        <div className="attachment-file-info">
+                          <strong>{file.name}</strong>
+                          <small>{formatFileSize(file.size)}</small>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={isActive || submitting}
+                          onClick={() => removeAttachment(index)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="attachment-summary">
+                  {attachments.length} of {MAX_ATTACHMENT_COUNT} files selected
+                  {" · "}
+                  {formatFileSize(totalAttachmentSize)} of 20 MB
+                </div>
+              </div>
+
               <div className="template-actions">
                 <button
                   type="button"
@@ -889,6 +1034,11 @@ function App() {
               <strong>{emailSubject || "—"}</strong>
             </div>
 
+            <div className="preview-row">
+              <span>Attachments</span>
+              <strong>{attachments.length} file(s)</strong>
+            </div>
+
             <h3>Email Message Preview</h3>
 
             <div className="email-preview">
@@ -966,6 +1116,13 @@ function App() {
               <div>
                 <span>Template</span>
                 <strong>{selectedTemplate?.name || "Compose from scratch"}</strong>
+              </div>
+
+              <div>
+                <span>Attachments</span>
+                <strong>
+                  {attachments.length} file(s) · {formatFileSize(totalAttachmentSize)}
+                </strong>
               </div>
             </div>
 

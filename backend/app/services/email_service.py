@@ -1,6 +1,7 @@
 
 import os
 import re
+import base64
 from html import escape
 from html.parser import HTMLParser
 
@@ -11,7 +12,8 @@ load_dotenv()
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
-SENDER_EMAIL = "IBK Grafix <info@ibkgrafix.com.ng>"
+# Preserve your current sender identity.
+SENDER_EMAIL = "Spectrum Solutions <info@ibkgrafix.com.ng>"
 
 ALLOWED_TAGS = {
     "p", "br", "strong", "b", "em", "i", "u", "s",
@@ -55,10 +57,7 @@ class EmailHTMLSanitizer(HTMLParser):
             )
             return
 
-        if tag in VOID_TAGS:
-            self.output.append(f"<{tag}>")
-        else:
-            self.output.append(f"<{tag}>")
+        self.output.append(f"<{tag}>")
 
     def handle_endtag(self, tag):
         if tag in {"script", "style", "iframe", "object", "svg"}:
@@ -91,7 +90,8 @@ def send_email(
     recipient_email: str,
     subject: str,
     html_body: str,
-    text_body: str
+    text_body: str,
+    attachments=None
 ):
     if not RESEND_API_KEY:
         raise ValueError("RESEND_API_KEY is missing.")
@@ -145,6 +145,18 @@ def send_email(
         "html": html_message
     }
 
+    # Resend expects attachment contents to be Base64 encoded.
+    if attachments:
+        payload["attachments"] = [
+            {
+                "filename": attachment["filename"],
+                "content": base64.b64encode(
+                    attachment["content"]
+                ).decode("utf-8")
+            }
+            for attachment in attachments
+        ]
+
     response = requests.post(
         "https://api.resend.com/emails",
         json=payload,
@@ -152,7 +164,7 @@ def send_email(
             "Authorization": f"Bearer {RESEND_API_KEY}",
             "Content-Type": "application/json"
         },
-        timeout=30
+        timeout=60
     )
 
     response.raise_for_status()
